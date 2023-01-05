@@ -1,0 +1,4 @@
+.vscode
+*.dSYM
+parser_test
+lexer_test
