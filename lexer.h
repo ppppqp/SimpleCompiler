@@ -11,6 +11,7 @@ using namespace std;
 enum TokenType{
     INIT,
     ID,
+    ID_INT,
     INT_LITERAL,
     GT,
     GE,
@@ -41,6 +42,9 @@ public:
 enum State{
     s_INIT,
     s_ID,
+    s_ID_INT1,
+    s_ID_INT2,
+    s_ID_INT3,
     s_INT_LITERAL,
     s_GT,
     s_GE,

@@ -2,7 +2,7 @@
 using namespace std;
 int main(){
     Lexer lexer;
-    string script = "age = 45;";
+    string script = "int age = 45;";
     cout << "script:" << script << endl;
     lexer.tokenize(script);
     cout << "result:\n";

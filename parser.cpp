@@ -1,6 +1,8 @@
+#include "parser.h"
+
 #include <string>
 #include <vector>
-#include "parser.h"
+
 #include "lexer.h"
 using namespace std;
 
@@ -26,9 +28,9 @@ std::ostream& operator<<(std::ostream& out, const ASTType value) {
   return out << s;
 }
 
-
 ASTNode* Parser::parse(string code) {
   init();
+	cout << "code: " << code << endl;
   Lexer lexer;
   tokens = lexer.tokenize(code);
   lexer.dump();
@@ -42,10 +44,10 @@ ASTNode* Parser::primary() {
   if (it != tokens.end()) {
     if (it->type == TokenType::INT_LITERAL) {
       it++;
-      node = new ASTNode(ASTType::ast_INT_LITERAL, it->text);
+      node = new ASTNode(ASTType::ast_INT_LITERAL, (it-1)->text);
     } else if (it->type == TokenType::ID) {
       it++;
-      node = new ASTNode(ASTType::ast_ID, it->text);
+      node = new ASTNode(ASTType::ast_ID, (it-1)->text);
     } else if (it->type == TokenType::LEFT_PAR) {
       it++;
       node = additive();
@@ -65,40 +67,49 @@ ASTNode* Parser::primary() {
 ASTNode* Parser::multiplicative() {
   ASTNode* child1 = primary();
   ASTNode* node = child1;
-  if (child1 != nullptr && it != tokens.end()) {
-    if (it->type == TokenType::STAR || it->type == TokenType::SLASH) {
-      it++;
-    }
-    ASTNode* child2 = multiplicative();
-    if (child2 != nullptr) {
-      node = new ASTNode(ASTType::ast_MULTIPLICATIVE, it->text);
-      node->children.push_back(child1);
-      node->children.push_back(child2);
-    } else {
-      throw "Invalid multiplicative expression";
-    }
+  while (true) {
+    if (child1 != nullptr && it != tokens.end()) {
+      if (it->type == TokenType::STAR || it->type == TokenType::SLASH) {
+        it++;
+      } else {
+				// multiplicative ends
+				break;
+      }
+      ASTNode* child2 = multiplicative();
+      if (child2 != nullptr) {
+        node = new ASTNode(ASTType::ast_MULTIPLICATIVE, (it-1)->text);
+        node->children.push_back(child1);
+        node->children.push_back(child2);
+      } else {
+        throw "Invalid multiplicative expression.";
+      }
+    } else{
+			return node;
+		}
   }
+
   return node;
 }
 ASTNode* Parser::additive() {
   ASTNode* child1 = multiplicative();
   ASTNode* node = child1;
-  if (child1 != nullptr && it != tokens.end()) {
+  while (child1 != nullptr && it != tokens.end()) {
     // first part is a valid multiplicative
 
     // read the operator
     if (it->type == TokenType::PLUS || it->type == TokenType::MINUS) {
       it++;
-    }
-
+    }else{
+			break;
+		}
     // second part
-    ASTNode* child2 = additive();
+    ASTNode* child2 = multiplicative(); // left associative
     if (child2 != nullptr) {
       // second part is valid additive
-      child1->children.push_back(child2);
-      node = new ASTNode(ASTType::ast_ADDITIVE, it->text);
+      node = new ASTNode(ASTType::ast_ADDITIVE, (it-1)->text);
       node->children.push_back(child1);
       node->children.push_back(child2);
+			child1 = node; // left associative
     } else {
       throw "Invalid additive expression.";
     }
@@ -106,11 +117,65 @@ ASTNode* Parser::additive() {
   return node;
 }
 
+ASTNode* Parser::expressionStmt() {
+  ASTNode* node = additive();
+  vector<Token>::iterator pos = it;
+  if (node) {
+    if (it != tokens.end() && it->type == TokenType::SEMI_COLON) {
+      it++;
+    } else {
+      node = nullptr;  // error: this is not an expression statement!
+      it = pos;        // rewind
+    }
+  }
+  return node;
+}
+
+ASTNode* Parser::assignmentStmt() {
+  ASTNode* node = nullptr;
+  if (it != tokens.end() && it->type == TokenType::ID) {
+    node = new ASTNode(ASTType::ast_ASSIGNMENT, (it-1)->text);
+    it++;
+    if (it != tokens.end() && it->type == TokenType::ASSIGN) {
+      it++;
+      ASTNode* child = additive();
+      if (child == nullptr) {
+        throw "Invalid assignment statement, expecting an expression.";
+      } else {
+        node->children.push_back(child);
+        if (it != tokens.end() && it->type == TokenType::SEMI_COLON) {
+          it++;
+        } else {
+          throw "Invalid statement, expecting semicolon";
+        }
+      }
+    } else {
+      // QUESTION: When to rewind and when to throw an error?
+      // ANSWER: when encounter an identifier, we don't know if it is an
+      // assignment or an expression, so rewind However, if we have identifier
+      // with an ASSIGN, we know the second part must be an expression, so error
+      it--;
+      node = nullptr;
+    }
+  }
+  return node;
+}
+
 ASTNode* Parser::programRoot() {
-  ASTNode* node = new ASTNode();
-  ASTNode* child = additive();  // see if it is additive
-  if (child != nullptr) {
-    node->children.push_back(child);
+  ASTNode* node = new ASTNode(ASTType::ast_ROOT, "root");
+  while (it != tokens.end()) {
+    ASTNode* child = declare();
+    if (child == nullptr) {
+      child = expressionStmt();
+    }
+    if (child == nullptr) {
+      child = assignmentStmt();
+    }
+    if (child != nullptr) {
+      node->children.push_back(child);
+    } else {
+      throw "Unknown statement.";
+    }
   }
   return node;
 }
@@ -123,12 +188,17 @@ void Parser::checkStatementEnd() {
 ASTNode* Parser::declare() {
   ASTNode* node = nullptr;
   if (it == tokens.end()) return node;
-
+	if(it->type == TokenType::ID_INT){
+		it++;
+		checkStatementEnd();
+	}else{
+		return node;
+	}
   if (it->type == TokenType::ID) {
     // identifier
     it++;
     checkStatementEnd();
-    node = new ASTNode(ASTType::ast_DECLARATION, it->text);
+    node = new ASTNode(ASTType::ast_DECLARATION, (it-1)->text);
     if (it->type == TokenType::ASSIGN) {
       // assignment =
       it++;
@@ -151,14 +221,12 @@ ASTNode* Parser::declare() {
   }
   return node;
 }
-void dumpHelper(ASTNode* node, string indent){
-    cout << indent << node->type << node->text << endl;
-    indent += "\t";
-    for (ASTNode* child : node->children) {
-        dumpHelper(child, indent);
-    }
+void dumpHelper(ASTNode* node, string indent) {
+  cout << indent << node->type << '(' << node->text  << ')' << endl;
+  indent += "  ";
+  for (ASTNode* child : node->children) {
+    dumpHelper(child, indent);
+  }
 }
-void Parser::dump() {
-    dumpHelper(root, "");
-}
-
+void Parser::dump() { 	cout << "=====================PARSER RESULT====================" << endl;
+dumpHelper(root, ""); }

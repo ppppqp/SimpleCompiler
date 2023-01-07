@@ -5,7 +5,8 @@ std::ostream& operator<<(std::ostream& out, const TokenType value){
 #define PROCESS_VAL(p) case(p): s = #p; break;
     switch(value){
         PROCESS_VAL(INIT);     
-        PROCESS_VAL(ID);     
+        PROCESS_VAL(ID);
+        PROCESS_VAL(ID_INT);       
         PROCESS_VAL(INT_LITERAL);
         PROCESS_VAL(GT);
         PROCESS_VAL(GE);
@@ -32,7 +33,6 @@ bool isBlank(char ch){
 }
 State Lexer::initState(char c){
     // previous token is complete
-    cout << token.text << endl;
     if(token.text.size() > 0){
         // previous token is complete
         tokens.push_back(token);
@@ -44,9 +44,15 @@ State Lexer::initState(char c){
         token.type = INT_LITERAL;
         token.text.push_back(c);
     }else if (isAlpha(c)){
-        newState = s_ID;
-        token.type = ID;
-        token.text.push_back(c);
+        if(c == 'i'){
+            newState = s_ID_INT1;
+            token.type = ID_INT;
+            token.text.push_back(c);
+        } else{
+            newState = s_ID;
+            token.type = ID;
+            token.text.push_back(c);
+        }
     }else if(c == '>'){
         newState = s_GT;
         token.type = GT;
@@ -93,7 +99,6 @@ State Lexer::initState(char c){
 vector<Token> Lexer::tokenize(string code){
     State state = s_INIT;
     for(char c : code){
-        cout << "state:" << state << endl;
         switch(state){
             case s_INIT: {
                 state = initState(c);
@@ -113,7 +118,6 @@ vector<Token> Lexer::tokenize(string code){
                     token.text.push_back(c);
                 }else{
                     state = initState(c);
-                    cout << "now state is" << state << endl;
                 }
                 break;
             }
@@ -124,6 +128,45 @@ vector<Token> Lexer::tokenize(string code){
                     token.text.push_back(c);        
                 }else{
                     state = initState(c);
+                }
+                break;
+            }
+            case s_ID_INT1:{
+                if(c == 'n'){
+                    state = s_ID_INT2;
+                    token.text.push_back(c);
+                } else if(isDigit(c) || isAlpha(c)){
+                    state = s_ID;
+                    token.text.push_back(c);
+                }else{
+                    state = initState(c);
+                }
+                break;
+            }
+            case s_ID_INT2:{
+                if(c == 't'){
+                    state = s_ID_INT3;
+                    token.text.push_back(c);
+                }else if(isDigit(c) || isAlpha(c)){
+                    state = s_ID;
+                    token.text.push_back(c);
+                }else{
+                    state = initState(c);
+                }
+                break;
+            }
+            case s_ID_INT3:{
+                if(isBlank(c)){
+                    token.type = ID_INT;
+                    initState(c);
+                }else if(isDigit(c) || isAlpha(c))
+                {
+                    // must be identifier, otherwise not valid
+                    state = s_ID;
+                    token.text.push_back(c);
+                } else{
+                    // may support parenthesis in future?
+                    throw "Error: invalid use of keyword 'int'";
                 }
                 break;
             }
@@ -151,6 +194,7 @@ vector<Token> Lexer::tokenize(string code){
     return tokens;
 }
 void Lexer::dump(){
+    cout << "======================LEXER RESULT====================" << endl;
     for(Token t: tokens){
         cout << setw(10) << t.type << setw(20)  <<  t.text << endl; 
     }

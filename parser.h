@@ -24,8 +24,8 @@ public:
     vector<ASTNode*> children;
     ASTType type;
     string text;
-    ASTNode():parent(nullptr),type(ast_ROOT),text(""){}
-    ASTNode(ASTType _type, string _text):parent(nullptr),type(_type),text(_text){}
+    ASTNode():parent(nullptr),type(ast_ROOT),text(""),children(vector<ASTNode*>()){}
+    ASTNode(ASTType _type, string _text):parent(nullptr),type(_type),text(_text),children(vector<ASTNode*>()){}
 };
 
 
@@ -57,7 +57,8 @@ public:
     ASTNode* primary();
     ASTNode* multiplicative();
     ASTNode* additive();
-
+    ASTNode* expressionStmt();
+    ASTNode* assignmentStmt();
     ASTNode* programRoot();
 
 
