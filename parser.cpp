@@ -30,9 +30,7 @@ std::ostream& operator<<(std::ostream& out, const ASTType value) {
 
 ASTNode* Parser::parse(string code) {
   init();
-  Lexer lexer;
   tokens = lexer.tokenize(code);
-  lexer.dump();
   it = tokens.begin();
   root = programRoot();
   return root;
@@ -68,7 +66,9 @@ ASTNode* Parser::multiplicative() {
   ASTNode* node = child1;
   while (true) {
     if (child1 != nullptr && it != tokens.end()) {
+			bool isStar = false;
       if (it->type == TokenType::STAR || it->type == TokenType::SLASH) {
+				isStar = it->type == TokenType::STAR;
         it++;
       } else {
 				// multiplicative ends
@@ -76,7 +76,7 @@ ASTNode* Parser::multiplicative() {
       }
       ASTNode* child2 = multiplicative();
       if (child2 != nullptr) {
-        node = new ASTNode(ASTType::ast_MULTIPLICATIVE, (it-1)->text);
+        node = new ASTNode(ASTType::ast_MULTIPLICATIVE, (isStar) ? "*" : "/");
         node->children.push_back(child1);
         node->children.push_back(child2);
       } else {
@@ -96,7 +96,9 @@ ASTNode* Parser::additive() {
     // first part is a valid multiplicative
 
     // read the operator
+		bool isPlus = false;
     if (it->type == TokenType::PLUS || it->type == TokenType::MINUS) {
+			isPlus = it->type == TokenType::PLUS;
       it++;
     }else{
 			break;
@@ -105,7 +107,7 @@ ASTNode* Parser::additive() {
     ASTNode* child2 = multiplicative(); // left associative
     if (child2 != nullptr) {
       // second part is valid additive
-      node = new ASTNode(ASTType::ast_ADDITIVE, (it-1)->text);
+      node = new ASTNode(ASTType::ast_ADDITIVE, (isPlus) ? "+" : "-");
       node->children.push_back(child1);
       node->children.push_back(child2);
 			child1 = node; // left associative
@@ -200,17 +202,16 @@ ASTNode* Parser::declare() {
     checkStatementEnd();
     node = new ASTNode(ASTType::ast_DECLARATION, (it-1)->text);
     if (it->type == TokenType::ASSIGN) {
-      // assignment =
-      it++;
-      checkStatementEnd();
-    }
-    ASTNode* child = additive();
-    // expression
+			// assignment =
+			it++;
+			ASTNode* child = additive();
+			// expression
 
-    if (child == nullptr) {
-      throw "Expecting expression in assignment.";
-    }
-    node->children.push_back(child);
+			if (child == nullptr) {
+				throw "Expecting expression in assignment.";
+			}
+			node->children.push_back(child);
+		}
     // semi colon
     checkStatementEnd();
     if (it->type == TokenType::SEMI_COLON) {
@@ -224,9 +225,13 @@ ASTNode* Parser::declare() {
 void dumpHelper(ASTNode* node, string indent) {
   cout << indent << node->type << '(' << node->text  << ')' << endl;
   indent += "  ";
+	if(node->type == ast_ASSIGNMENT) cout << "assign in dump:" << node << endl;
   for (ASTNode* child : node->children) {
     dumpHelper(child, indent);
   }
 }
-void Parser::dump() { 	cout << "=====================PARSER RESULT====================" << endl;
-dumpHelper(root, ""); }
+void Parser::dump() {
+	lexer.dump();
+	cout << "=====================PARSER RESULT====================" << endl;
+	dumpHelper(root, ""); 
+}

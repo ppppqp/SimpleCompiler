@@ -5,6 +5,10 @@ int main(){
         Parser parser(script);
         parser.dump();
         
+        script = "int a;";
+        parser.parse(script);
+        parser.dump();
+
         script = "a=45;";
         parser.parse(script);
         parser.dump();

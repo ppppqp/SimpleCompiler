@@ -31,9 +31,11 @@ public:
 
 class Parser{
 public:
+    Lexer lexer;
     vector<Token> tokens;
     vector<Token>::iterator it;
     ASTNode* root;
+    Parser():root(nullptr){}
     Parser(string code):root(nullptr){
         parse(code);
     }

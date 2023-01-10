@@ -98,6 +98,8 @@ State Lexer::initState(char c){
 }
 
 vector<Token> Lexer::tokenize(string code){
+    tokens.clear();
+    token.init();
     State state = s_INIT;
     for(char c : code){
         switch(state){

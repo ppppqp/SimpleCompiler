@@ -18,8 +18,19 @@ test_parser:
 	make parser
 	./parser_test
 
+script:
+	$(CXX) $(CXXFLAGS) script_test.cpp script.cpp parser.cpp lexer.cpp -o script_test
+
+test_script:
+	make clean
+	make script
+	./script_test < script_test.in
+
+	
+
 
 clean:
 	rm -f *.o
 	rm -f lexer_test
 	rm -f parser_test
+	rm -f script_test
