@@ -38,6 +38,7 @@ State Lexer::initState(char c){
         tokens.push_back(token);
         token.init();
     }
+
     State newState = s_INIT; // new state
     if(isDigit(c)){
         newState = s_INT_LITERAL;
@@ -158,7 +159,7 @@ vector<Token> Lexer::tokenize(string code){
             case s_ID_INT3:{
                 if(isBlank(c)){
                     token.type = ID_INT;
-                    initState(c);
+                    state = initState(c);
                 }else if(isDigit(c) || isAlpha(c))
                 {
                     // must be identifier, otherwise not valid

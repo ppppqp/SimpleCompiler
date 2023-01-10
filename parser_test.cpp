@@ -1,7 +1,7 @@
 #include "parser.h"
 int main(){
     try{
-        string script = "a = b+3;";
+        string script = "int a = b+3;";
         Parser parser(script);
         parser.dump();
         

@@ -30,7 +30,6 @@ std::ostream& operator<<(std::ostream& out, const ASTType value) {
 
 ASTNode* Parser::parse(string code) {
   init();
-	cout << "code: " << code << endl;
   Lexer lexer;
   tokens = lexer.tokenize(code);
   lexer.dump();
@@ -118,8 +117,8 @@ ASTNode* Parser::additive() {
 }
 
 ASTNode* Parser::expressionStmt() {
+	vector<Token>::iterator pos = it;
   ASTNode* node = additive();
-  vector<Token>::iterator pos = it;
   if (node) {
     if (it != tokens.end() && it->type == TokenType::SEMI_COLON) {
       it++;
@@ -134,8 +133,9 @@ ASTNode* Parser::expressionStmt() {
 ASTNode* Parser::assignmentStmt() {
   ASTNode* node = nullptr;
   if (it != tokens.end() && it->type == TokenType::ID) {
+		it++;
     node = new ASTNode(ASTType::ast_ASSIGNMENT, (it-1)->text);
-    it++;
+
     if (it != tokens.end() && it->type == TokenType::ASSIGN) {
       it++;
       ASTNode* child = additive();
